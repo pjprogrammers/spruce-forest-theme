@@ -1,6 +1,12 @@
 # 🌲 Spruce Forest Theme for Linux
 
-![Spruce Forest Theme Preview](spruce-forest-theme/previews/preview.png)
+
+<h2 align="center">🖼️ Preview Image</h2>
+
+<p align="center">
+  <img width="959" height="421" alt="image" src="https://github.com/user-attachments/assets/90a6e7b2-0d2e-4717-8fe0-79d0aeb1bb9c" />
+</p>
+
 
 > A beautifully crafted Linux theme package featuring a serene spruce forest aesthetic with elegant widgets and customization options
 
@@ -65,13 +71,20 @@ SELECTED_ICON_THEME="We10X"               # Options: We10X or We10X-dark
 
 ## 📸 Preview
 
-### Wallpaper Options
-| spruce_forest_1.jpg | spruce_forest_2.jpg | spruce_forest_3.jpg |
-|---------------------|---------------------|---------------------|
-| ![Wallpaper 1](spruce-forest-theme/wallpapers/spruce_forest_1.jpg) | ![Wallpaper 2](spruce-forest-theme/wallpapers/spruce_forest_2.jpg) | ![Wallpaper 3](spruce-forest-theme/wallpapers/spruce_forest_3.jpg) |
+  <h2 align="center">🌲 Wallpaper Options</h2>
 
-### Video Demonstration
-[![Theme Demo Video](https://img.youtube.com/vi/dQw4w9WgXcQ/0.jpg)](https://www.youtube.com/watch?v=dQw4w9WgXcQ)
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/3b2a02db-bcdf-4486-9080-f55b13ccc5eb" alt="spruce_forest_1" width="30%" style="margin: 5px;">
+  <img src="https://github.com/user-attachments/assets/d8241f11-21db-4eed-bc8f-acc2d4ecbf82" alt="spruce_forest_2" width="30%" style="margin: 5px;">
+  <img src="https://github.com/user-attachments/assets/f676e4bf-2761-4799-bdd4-5df5e66ec8e0" alt="spruce_forest_3" width="30%" style="margin: 5px;">
+</p>
+
+
+<h2 align="center">🎬 Video Demonstration</h2>
+<p align="center">
+  <strong>🚧 Coming Soon...</strong><br>
+</p>
+
 
 ## ⚙️ Dependencies
 
