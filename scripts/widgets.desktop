@@ -1,0 +1,16 @@
+[Desktop Entry]
+Encoding=UTF-8
+Version=1.0
+Type=Application
+Name=Spruce Forest Widgets
+Comment=Conky widgets for Spruce Forest Theme
+Exec=bash -c "sleep 10 && $HOME/Documents/spruce-forest-theme/scripts/launch-conky.sh"
+TryExec=conky
+Icon=application-x-executable
+Categories=Utility;
+StartupNotify=false
+Terminal=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+X-KDE-autostart-phase=2
+X-MATE-Autostart-enabled=true
