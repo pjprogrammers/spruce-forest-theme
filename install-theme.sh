@@ -1,7 +1,7 @@
 #!/bin/bash
 # ========================================================
 # Spruce Forest Theme Installer 🌲
-# Version: 1.0
+# Version: 1.1
 # Author: pjprogrammers
 # GitHub: https://github.com/pjprogrammers/spruce-forest-theme
 # License: MIT
@@ -41,21 +41,29 @@ install_dependencies() {
     # Map: command → package name
     declare -A pkg_map=( ["git"]="git" ["conky"]="conky-all" )
     local install_cmd=""
+    local update_cmd=""
     local missing_pkgs=()
 
     # Detect package manager
     if command -v apt >/dev/null; then
+        update_cmd="sudo apt update"
         install_cmd="sudo apt install -y"
     elif command -v pacman >/dev/null; then
         pkg_map["conky"]="conky"
+        update_cmd="sudo pacman -Sy"
         install_cmd="sudo pacman -S --noconfirm"
     elif command -v dnf >/dev/null; then
         pkg_map["conky"]="conky"
+        update_cmd="sudo dnf check-update"
         install_cmd="sudo dnf install -y"
     else
         echo "❌ Unsupported package manager."
         return 1
     fi
+
+    # Update package list first
+    echo "🔄 Updating package list..."
+    $update_cmd
 
     # Check and collect missing
     for cmd in "${!pkg_map[@]}"; do
@@ -86,7 +94,10 @@ set_wallpaper() {
         gsettings set org.gnome.desktop.background picture-uri-dark "file://$WALLPAPER" 2>/dev/null
         gsettings set org.gnome.desktop.background picture-uri "file://$WALLPAPER" 2>/dev/null
     elif command -v xfconf-query >/dev/null; then
-        xfconf-query -c xfce4-desktop -p /backdrop/screen0/monitor0/workspace0/last-image -s "$WALLPAPER" 2>/dev/null
+        # Apply wallpaper for all monitors
+        for i in {0..4}; do
+            xfconf-query -c xfce4-desktop -p /backdrop/screen0/monitor$i/image-path -s "$WALLPAPER"
+        done
     elif command -v plasma-apply-wallpaperimage >/dev/null; then
         plasma-apply-wallpaperimage "$WALLPAPER" 2>/dev/null
     else
@@ -181,8 +192,9 @@ main() {
         echo "✅ Conky autostart enabled."
     fi
 
-    # 6. Launch Conky
+    # 6. Make launch-conky.sh executable
     if [ -f "$THEME_DIR/scripts/launch-conky.sh" ]; then
+        chmod +x "$THEME_DIR/scripts/launch-conky.sh"
         bash -c "sleep 10 && bash \"$THEME_DIR/scripts/launch-conky.sh\"" &
         echo "✅ Conky will launch in 10s."
     fi
