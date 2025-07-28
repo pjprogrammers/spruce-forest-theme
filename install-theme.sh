@@ -127,18 +127,21 @@ apply_theme_settings() {
 install_assets() {
     echo "📦 Installing theme assets..."
 
-    # Wallpapers
-    mkdir -p "$HOME/Pictures/Wallpapers"
+    # Wallpapers (copy as root)
     if [ -d "$THEME_DIR/wallpapers" ]; then
-        cp -r "$THEME_DIR/wallpapers/"* "$HOME/Pictures/Wallpapers/"
-        echo "✅ Wallpapers: ~/Pictures/Wallpapers/"
+        echo "🖼️ Copying wallpapers to /usr/share/backgrounds/kali-16x9 (requires sudo)..."
+        sudo mkdir -p /usr/share/backgrounds/kali-16x9
+        sudo cp "$THEME_DIR/wallpapers/"* /usr/share/backgrounds/kali-16x9/
+        echo "✅ Wallpapers installed to: /usr/share/backgrounds/kali-16x9/"
+    else
+        echo "⚠️ No wallpapers found in $THEME_DIR/wallpapers"
     fi
 
     # GTK Themes
     mkdir -p "$HOME/.themes"
     if [ -d "$THEME_DIR/themes" ]; then
         cp -r "$THEME_DIR/themes/"* "$HOME/.themes/"
-        echo "✅ GTK Themes: ~/.themes/"
+        echo "✅ GTK Themes installed to: ~/.themes/"
     fi
 
     # Icons (only message, not included in repo)
@@ -150,11 +153,11 @@ install_assets() {
     if [ -d "$THEME_DIR/fonts" ]; then
         cp "$THEME_DIR/fonts/"* "$HOME/.fonts/"
         fc-cache -fv >/dev/null
-        echo "✅ Fonts: ~/.fonts/"
+        echo "✅ Fonts installed to: ~/.fonts/"
     fi
 
-    # Set wallpaper after copying
-    WALLPAPER="$HOME/Pictures/Wallpapers/$SELECTED_WALLPAPER"
+    # Set wallpaper (now using system-wide path)
+    WALLPAPER="/usr/share/backgrounds/kali-16x9/$SELECTED_WALLPAPER"
     set_wallpaper
 }
 
