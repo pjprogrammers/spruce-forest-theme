@@ -34,10 +34,10 @@
 ### Automated Installer
 ```bash
 # Clone the repository
-git clone https://github.com/pjprogrammers/linux-customizations
+git clone https://github.com/pjprogrammers/spruce-forest-theme
 
 # Run the installer
-cd linux-customizations/spruce-forest-theme
+cd spruce-forest-theme
 chmod +x install-theme.sh
 ./install-theme.sh
 ```
@@ -98,7 +98,7 @@ The installer will automatically handle:
 
 We welcome contributions! To add your own theme pack:
 1. Fork this repository
-2. Create a new folder under `linux-customizations/` with your theme name
+2. Create a new folder under `spruce-forest-theme/` with your theme name
 3. Follow the same structure as spruce-forest-theme
 4. Submit a pull request
 
