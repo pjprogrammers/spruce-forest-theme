@@ -1,214 +1,249 @@
-#!/bin/bash
-# ========================================================
-# Spruce Forest Theme Installer 🌲
-# Version: 1.1
-# Author: pjprogrammers
-# GitHub: https://github.com/pjprogrammers/spruce-forest-theme
-# License: MIT
-# ========================================================
-#
-# Description:
-# Automated installer for Spruce Forest Theme package.
-# Features:
-# - Cross-DE compatibility (GNOME, XFCE, KDE)
-# - Selective component application
-# - Full asset deployment
-# - Automatic dependency handling
-#
-# Usage:
-# 1. chmod +x install-theme.sh
-# 2. ./install-theme.sh
-# ========================================================
+#!/usr/bin/env bash
 
-# ========================
-# CONFIGURATION
-# ========================
+set -euo pipefail
+
 THEME_NAME="Spruce Forest Theme"
 THEME_DIR="$HOME/Documents/spruce-forest-theme"
 REPO_URL="https://github.com/pjprogrammers/spruce-forest-theme"
 
-# User-selectable components
-SELECTED_WALLPAPER="spruce_forest_1.jpg"     # Options: spruce_forest_{1..3}.jpg
-SELECTED_GTK_THEME="Lavanda-Sea-Dark"        # From themes/
-SELECTED_ICON_THEME="Flat-Remix-Teal-Dark"   # Must be installed on system
+SELECTED_WALLPAPER="spruce_forest_1.jpg"
+SELECTED_GTK_THEME="Lavanda-Sea-Dark"
+SELECTED_ICON_THEME="Flat-Remix-Teal-Dark"
 
-# ========================
-# DEPENDENCY MANAGEMENT
-# ========================
+WALLPAPER_DIR="/usr/share/backgrounds/kali-16x9"
+
 install_dependencies() {
-    echo "🔍 Checking system dependencies..."
+    echo "Checking system dependencies..."
 
-    # Map: command → package name
-    declare -A pkg_map=( ["git"]="git" ["conky"]="conky-all" )
-    local install_cmd=""
-    local update_cmd=""
-    local missing_pkgs=()
+    local package_manager=""
+    local missing_packages=()
 
-    # Detect package manager
-    if command -v apt >/dev/null; then
-        update_cmd="sudo apt update"
-        install_cmd="sudo apt install -y"
-    elif command -v pacman >/dev/null; then
-        pkg_map["conky"]="conky"
-        update_cmd="sudo pacman -Sy"
-        install_cmd="sudo pacman -S --noconfirm"
-    elif command -v dnf >/dev/null; then
-        pkg_map["conky"]="conky"
-        update_cmd="sudo dnf check-update"
-        install_cmd="sudo dnf install -y"
+    if command -v apt-get >/dev/null 2>&1; then
+        package_manager="apt"
+    elif command -v pacman >/dev/null 2>&1; then
+        package_manager="pacman"
+    elif command -v dnf >/dev/null 2>&1; then
+        package_manager="dnf"
     else
-        echo "❌ Unsupported package manager."
+        echo "Error: unsupported package manager."
+        echo "Supported package managers: apt, pacman, dnf."
         return 1
     fi
 
-    # Update package list first
-    echo "🔄 Updating package list..."
-    $update_cmd
-
-    # Check and collect missing
-    for cmd in "${!pkg_map[@]}"; do
-        if ! command -v "$cmd" >/dev/null 2>&1; then
-            missing_pkgs+=("${pkg_map[$cmd]}")
-        fi
-    done
-
-    # Install if needed
-    if [ "${#missing_pkgs[@]}" -gt 0 ]; then
-        echo "📦 Installing: ${missing_pkgs[*]}"
-        if ! $install_cmd "${missing_pkgs[@]}"; then
-            echo "⚠️ Some packages failed to install."
-        fi
-    else
-        echo "✅ All dependencies are satisfied."
+    if ! command -v sudo >/dev/null 2>&1; then
+        echo "Error: sudo is required to install system packages."
+        return 1
     fi
+
+    if ! command -v git >/dev/null 2>&1; then
+        missing_packages+=("git")
+    fi
+
+    if ! command -v conky >/dev/null 2>&1; then
+        case "$package_manager" in
+            apt)
+                missing_packages+=("conky-all")
+                ;;
+            pacman|dnf)
+                missing_packages+=("conky")
+                ;;
+        esac
+    fi
+
+    if [ "${#missing_packages[@]}" -eq 0 ]; then
+        echo "All required dependencies are already installed."
+        return 0
+    fi
+
+    echo "Installing missing packages: ${missing_packages[*]}"
+
+    case "$package_manager" in
+        apt)
+            sudo apt-get update
+            sudo apt-get install -y "${missing_packages[@]}"
+            ;;
+        pacman)
+            sudo pacman -Sy --needed --noconfirm "${missing_packages[@]}"
+            ;;
+        dnf)
+            sudo dnf makecache
+            sudo dnf install -y "${missing_packages[@]}"
+            ;;
+    esac
+
+    echo "Dependencies installed."
 }
 
-# ========================
-# WALLPAPER SETUP
-# ========================
+clone_or_update_repository() {
+    if [ -d "$THEME_DIR/.git" ]; then
+        echo "Updating existing theme repository..."
+
+        git -C "$THEME_DIR" pull --ff-only
+        return 0
+    fi
+
+    if [ -e "$THEME_DIR" ]; then
+        echo "Error: $THEME_DIR already exists but is not a Git repository."
+        echo "Move or remove that directory and run the installer again."
+        return 1
+    fi
+
+    echo "Cloning theme repository..."
+    git clone "$REPO_URL" "$THEME_DIR"
+}
+
 set_wallpaper() {
-    [ ! -f "$WALLPAPER" ] && return 1
+    local wallpaper="$1"
 
-    echo "🖼️ Setting wallpaper: $(basename "$WALLPAPER")"
-    if command -v gsettings >/dev/null; then
-        gsettings set org.gnome.desktop.background picture-uri-dark "file://$WALLPAPER" 2>/dev/null
-        gsettings set org.gnome.desktop.background picture-uri "file://$WALLPAPER" 2>/dev/null
-    elif command -v xfconf-query >/dev/null; then
-        # Apply wallpaper for all monitors
-        for i in {0..4}; do
-            xfconf-query -c xfce4-desktop -p /backdrop/screen0/monitor$i/image-path -s "$WALLPAPER"
+    if [ ! -f "$wallpaper" ]; then
+        echo "Warning: wallpaper not found: $wallpaper"
+        return 1
+    fi
+
+    echo "Setting wallpaper: $(basename "$wallpaper")"
+
+    if command -v gsettings >/dev/null 2>&1; then
+        gsettings set org.gnome.desktop.background picture-uri-dark "file://$wallpaper" || true
+        gsettings set org.gnome.desktop.background picture-uri "file://$wallpaper" || true
+
+    elif command -v xfconf-query >/dev/null 2>&1; then
+        for monitor in {0..4}; do
+            xfconf-query \
+                -c xfce4-desktop \
+                -p "/backdrop/screen0/monitor${monitor}/image-path" \
+                -s "$wallpaper" 2>/dev/null || true
         done
-    elif command -v plasma-apply-wallpaperimage >/dev/null; then
-        plasma-apply-wallpaperimage "$WALLPAPER" 2>/dev/null
+
+    elif command -v plasma-apply-wallpaperimage >/dev/null 2>&1; then
+        plasma-apply-wallpaperimage "$wallpaper"
+
     else
-        echo "ℹ️ Manual step: Set wallpaper from: $WALLPAPER"
+        echo "No supported desktop wallpaper utility was found."
+        echo "Set the wallpaper manually from:"
+        echo "  $wallpaper"
         return 1
     fi
 }
 
-# ========================
-# THEME AND ICON SETTINGS
-# ========================
-apply_theme_settings() {
-    echo "🎨 Applying GTK and icon themes..."
-    if command -v gsettings >/dev/null; then
-        gsettings set org.gnome.desktop.interface gtk-theme "$SELECTED_GTK_THEME"
-        gsettings set org.gnome.desktop.interface icon-theme "$SELECTED_ICON_THEME"
-        echo "✅ GTK Theme: $SELECTED_GTK_THEME"
-        echo "✅ Icon Theme: $SELECTED_ICON_THEME"
-    else
-        echo "⚠️ Your desktop may not support automatic theme setting."
-    fi
-}
-
-# ========================
-# INSTALL THEME ASSETS
-# ========================
 install_assets() {
-    echo "📦 Installing theme assets..."
+    echo "Installing theme assets..."
 
-    # Wallpapers (copy as root)
     if [ -d "$THEME_DIR/wallpapers" ]; then
-        echo "🖼️ Copying wallpapers to /usr/share/backgrounds/kali-16x9 (requires sudo)..."
-        sudo mkdir -p /usr/share/backgrounds/kali-16x9
-        sudo cp "$THEME_DIR/wallpapers/"* /usr/share/backgrounds/kali-16x9/
-        echo "✅ Wallpapers installed to: /usr/share/backgrounds/kali-16x9/"
+        echo "Installing wallpapers to $WALLPAPER_DIR..."
+
+        sudo mkdir -p "$WALLPAPER_DIR"
+        sudo cp -r "$THEME_DIR/wallpapers/." "$WALLPAPER_DIR/"
+
+        echo "Wallpapers installed."
     else
-        echo "⚠️ No wallpapers found in $THEME_DIR/wallpapers"
+        echo "Warning: wallpaper directory not found:"
+        echo "  $THEME_DIR/wallpapers"
     fi
 
-    # GTK Themes
-    mkdir -p "$HOME/.themes"
     if [ -d "$THEME_DIR/themes" ]; then
-        cp -r "$THEME_DIR/themes/"* "$HOME/.themes/"
-        echo "✅ GTK Themes installed to: ~/.themes/"
+        mkdir -p "$HOME/.themes"
+        cp -r "$THEME_DIR/themes/." "$HOME/.themes/"
+
+        echo "GTK themes installed to:"
+        echo "  $HOME/.themes"
+    else
+        echo "Warning: theme directory not found:"
+        echo "  $THEME_DIR/themes"
     fi
 
-    # Icons (only message, not included in repo)
     mkdir -p "$HOME/.icons"
-    echo "📎 NOTE: Make sure $SELECTED_ICON_THEME is installed in ~/.icons/"
 
-    # Fonts
-    mkdir -p "$HOME/.fonts"
-    if [ -d "$THEME_DIR/fonts" ]; then
-        cp "$THEME_DIR/fonts/"* "$HOME/.fonts/"
-        fc-cache -fv >/dev/null
-        echo "✅ Fonts installed to: ~/.fonts/"
+    if [ -d "$HOME/.icons/$SELECTED_ICON_THEME" ]; then
+        echo "Icon theme found: $SELECTED_ICON_THEME"
+    else
+        echo "Note: $SELECTED_ICON_THEME is not included in this repository."
+        echo "Install it separately if it is not already installed."
     fi
 
-    # Set wallpaper (now using system-wide path)
-    WALLPAPER="/usr/share/backgrounds/kali-16x9/$SELECTED_WALLPAPER"
-    set_wallpaper
+    if [ -d "$THEME_DIR/fonts" ]; then
+        mkdir -p "$HOME/.fonts"
+        cp -r "$THEME_DIR/fonts/." "$HOME/.fonts/"
+
+        if command -v fc-cache >/dev/null 2>&1; then
+            fc-cache -fv >/dev/null
+        fi
+
+        echo "Fonts installed to:"
+        echo "  $HOME/.fonts"
+    fi
+
+    local wallpaper="$WALLPAPER_DIR/$SELECTED_WALLPAPER"
+
+    set_wallpaper "$wallpaper" || true
 }
 
-# ========================
-# MAIN INSTALLATION
-# ========================
+apply_theme_settings() {
+    if ! command -v gsettings >/dev/null 2>&1; then
+        echo "GTK and icon theme settings were not changed automatically."
+        echo "Automatic theme selection is currently configured for GNOME."
+        return 0
+    fi
+
+    echo "Applying GTK and icon themes..."
+
+    if ! gsettings set org.gnome.desktop.interface gtk-theme "$SELECTED_GTK_THEME"; then
+        echo "Warning: failed to apply GTK theme: $SELECTED_GTK_THEME"
+    fi
+
+    if ! gsettings set org.gnome.desktop.interface icon-theme "$SELECTED_ICON_THEME"; then
+        echo "Warning: failed to apply icon theme: $SELECTED_ICON_THEME"
+    fi
+
+    echo "GTK theme: $SELECTED_GTK_THEME"
+    echo "Icon theme: $SELECTED_ICON_THEME"
+}
+
+setup_conky() {
+    local autostart_dir="$HOME/.config/autostart"
+    local widgets_desktop="$THEME_DIR/scripts/widgets.desktop"
+    local launch_script="$THEME_DIR/scripts/launch-conky.sh"
+
+    echo "Setting up Conky..."
+
+    mkdir -p "$autostart_dir"
+
+    if [ -f "$widgets_desktop" ]; then
+        cp "$widgets_desktop" "$autostart_dir/"
+        echo "Conky autostart enabled."
+    else
+        echo "Warning: widgets.desktop not found."
+    fi
+
+    if [ -f "$launch_script" ]; then
+        chmod +x "$launch_script"
+
+        (
+            sleep 10
+            "$launch_script"
+        ) &
+
+        echo "Conky will launch in 10 seconds."
+    else
+        echo "Warning: launch-conky.sh not found."
+    fi
+}
+
 main() {
-    echo -e "\n🌲 \033[1mInstalling $THEME_NAME\033[0m 🌲"
+    echo
+    echo "Installing $THEME_NAME"
     echo "========================================"
 
-    # 1. Dependencies
     install_dependencies
-
-    # 2. Clone theme repo if not present
-    if [ ! -d "$THEME_DIR" ]; then
-        echo "📥 Cloning theme repo..."
-        if ! git clone "$REPO_URL" "$THEME_DIR"; then
-            echo "❌ Failed to clone theme repo."
-            exit 1
-        fi
-    fi
-
-    # 3. Install assets
+    clone_or_update_repository
     install_assets
-
-    # 4. Apply GTK + Icon themes
     apply_theme_settings
+    setup_conky
 
-    # 5. Conky Autostart
-    echo -e "\n🧩 Setting up Conky..."
-    AUTOSTART_DIR="$HOME/.config/autostart"
-    mkdir -p "$AUTOSTART_DIR"
-    if [ -f "$THEME_DIR/scripts/widgets.desktop" ]; then
-        cp "$THEME_DIR/scripts/widgets.desktop" "$AUTOSTART_DIR/"
-        echo "✅ Conky autostart enabled."
-    fi
-
-    # 6. Make launch-conky.sh executable
-    if [ -f "$THEME_DIR/scripts/launch-conky.sh" ]; then
-        chmod +x "$THEME_DIR/scripts/launch-conky.sh"
-        bash -c "sleep 10 && bash \"$THEME_DIR/scripts/launch-conky.sh\"" &
-        echo "✅ Conky will launch in 10s."
-    fi
-
-    # Done
-    echo -e "\n========================================"
-    echo -e "🎉 \033[1m$THEME_NAME installed successfully!\033[0m"
-    echo -e "🛑 Log out and back in to apply all changes.\n"
+    echo
+    echo "========================================"
+    echo "$THEME_NAME installed successfully."
+    echo
+    echo "Log out and back in if some desktop changes are not immediately visible."
 }
 
-# ========================
-# EXECUTION START
-# ========================
 main "$@"
